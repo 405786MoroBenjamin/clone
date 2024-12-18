@@ -8,12 +8,14 @@ const PORT = 3000;
 
 // Middleware
 app.use(express.json({ limit: '10mb' }));
+
 app.use(cors({
-    origin: 'https://clone-lethzs-projects.vercel.app/', // Reemplaza con el dominio de tu aplicación en Vercel
-    methods: ['GET', 'POST', 'PUT', 'DELETE'],
-    allowedHeaders: ['Content-Type', 'Authorization'],
-    credentials: true
-})); // Agrega el middleware CORS con configuración
+    origin: '*', // Permite cualquier origen
+    methods: ['GET', 'POST', 'PUT', 'DELETE'], // Métodos HTTP permitidos
+    allowedHeaders: ['Content-Type', 'Authorization'], // Cabeceras permitidas
+    credentials: true // Permite enviar cookies con las solicitudes
+}));
+
 
 // Conexión a SQLite
 const db = new sqlite3.Database('./database.db', (err) => {
