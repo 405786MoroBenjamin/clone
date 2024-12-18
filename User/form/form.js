@@ -18,7 +18,7 @@ document.addEventListener('DOMContentLoaded', () => {
             });
 
             if (!response.ok) {
-                window.location.href = '../login/login.html';
+                window.location.href = '../login/index.html';
                 throw new Error('Token inválido');
                 
             }
