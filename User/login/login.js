@@ -20,7 +20,7 @@ document.getElementById('loginForm').addEventListener('submit', async (e) => {
 
         const { token } = await response.json();
         localStorage.setItem('authToken', token);
-        window.location.href = '../form/form.html';
+        window.location.href = '../form/index.html';
     } catch (error) {
         errorMessage.textContent = error.message;
     }
