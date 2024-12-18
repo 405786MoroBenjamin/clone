@@ -107,6 +107,72 @@ app.get('/get-numero', (req, res) => {
     });
 });
 
+
+// ------------------------------------------------------- Cosas de las imagenes
+const multer = require('multer');
+const path = require('path');
+const fs = require('fs');
+
+// Configurar multer para guardar las imágenes en la carpeta "images"
+const storage = multer.diskStorage({
+    destination: (req, file, cb) => {
+        const IMAGE_FOLDER = path.join(__dirname, 'images');
+        if (!fs.existsSync(IMAGE_FOLDER)) {
+            fs.mkdirSync(IMAGE_FOLDER, { recursive: true });
+        }
+        cb(null, IMAGE_FOLDER);
+    },
+    filename: (req, file, cb) => {
+        cb(null, file.originalname); // Usamos el nombre original del archivo
+    }
+});
+
+const upload = multer({ storage });
+
+// Ruta para actualizar la imagen
+app.put('/update-image', upload.single('image'), (req, res) => {
+    const { token, currentImageName } = req.body;
+
+    // Validar token
+    db.get('SELECT * FROM data WHERE token = ?', [token], (err, row) => {
+        if (err) {
+            return res.status(500).json({ error: 'Error al verificar el token' });
+        }
+        if (!row) {
+            return res.status(401).json({ message: 'Token inválido' });
+        }
+
+        // Buscar la imagen sin importar la extensión
+        const IMAGE_FOLDER = path.join(__dirname, 'images');
+        const currentImageBaseName = path.basename(currentImageName, path.extname(currentImageName));
+
+        const matchingFiles = fs.readdirSync(IMAGE_FOLDER).filter((file) => {
+            const fileBaseName = path.basename(file, path.extname(file));
+            return fileBaseName === currentImageBaseName;
+        });
+
+        // Validar si no se encontró la imagen
+        if (matchingFiles.length === 0) {
+            return res.status(404).json({ message: 'La imagen actual no existe, no se realizó ningún cambio' });
+        }
+
+        // Usar el primer archivo encontrado como la imagen actual
+        const currentImagePath = path.join(IMAGE_FOLDER, matchingFiles[0]);
+        const currentImageExtension = path.extname(matchingFiles[0]);
+
+        // Reemplazar la imagen manteniendo el mismo nombre y extensión
+        const newImagePath = path.join(IMAGE_FOLDER, currentImageBaseName + currentImageExtension);
+        fs.rename(req.file.path, newImagePath, (err) => {
+            if (err) {
+                return res.status(500).json({ error: 'Error al actualizar la imagen' });
+            }
+            res.json({ message: 'Imagen actualizada correctamente' });
+        });
+    });
+});
+
+
+
 // Iniciar servidor
 app.listen(PORT, () => {
     console.log(`Servidor corriendo en http://localhost:${PORT}`);
