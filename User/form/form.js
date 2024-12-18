@@ -2,7 +2,7 @@ document.addEventListener('DOMContentLoaded', () => {
     const token = localStorage.getItem('authToken');
 
     if (!token) {
-        window.location.href = 'index.html'; // Redirigir al login si no hay token
+        window.location.href = '../login/index.html'; // Redirigir al login si no hay token
         return;
     }
 
@@ -29,7 +29,7 @@ document.addEventListener('DOMContentLoaded', () => {
             console.error('Error de validación de token:', error.message);
             document.getElementById('errorMessage').textContent = 'Token inválido';
             console.log("a");        
-            window.location.href = '../login/login.html';
+            window.location.href = '../login/index.html';
         }
     };
 
