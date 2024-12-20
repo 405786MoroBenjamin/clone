@@ -38,8 +38,12 @@ document.addEventListener('DOMContentLoaded', () => {
     document.getElementById('numberForm').addEventListener('submit', async (e) => {
         e.preventDefault();
         
-        const numero = document.getElementById('numero').value;
-
+        const numero = Number(document.getElementById('numero').value); // Convertir a número
+        if (isNaN(numero)) {
+            alert('Por favor ingresa un valor numérico válido');
+            return;
+        }
+        
         try {
             const response = await fetch('http://localhost:3000/update-numero', {
                 method: 'PUT',
@@ -50,7 +54,8 @@ document.addEventListener('DOMContentLoaded', () => {
             });
 
             if (!response.ok) {
-                throw new Error('Error al actualizar el número');
+                const errorResponse = await response.json();
+                throw new Error(errorResponse.error || 'Error al actualizar el número');
             }
 
             alert('Número actualizado exitosamente');

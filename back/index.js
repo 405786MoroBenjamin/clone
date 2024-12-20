@@ -151,6 +151,21 @@ app.get('/get-data', (req, res) => {
     });
 });
 
+// Obtener unicamente el numero
+app.get("/get-numero", (req, res) => {
+    db.get('SELECT numero FROM data WHERE id = 1', (err, row) => {
+        if (err) {
+            return res.status(500).json({ error: 'Error al obtener el número' });
+        }
+        if (!row) {
+            return res.status(404).json({ message: 'No se encontró el número' });
+        }
+        res.json(row);
+    });
+});
+
+
+
 // ------------------------------------------------------- Update numero
 
 app.put('/update-numero', (req, res) => {
@@ -176,6 +191,9 @@ app.put('/update-numero', (req, res) => {
         });
     });
 });
+
+
+
 
 // ------------------------------------------------------- Cosas de las imagenes
 const fs = require('fs');
