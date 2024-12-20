@@ -1,0 +1,34 @@
+.card{
+    border-radius: 15px;
+}
+.card-body{
+    background-color: #3e1949 !important;
+    color: white;
+    border-radius: 15px;
+    border: #efb810 3px solid;
+}
+
+.text-muted{
+    color: #b6a162 !important;
+}
+
+.text-mutedw{
+    color: #5c502d !important;
+}
+
+/* Estilizar el cuerpo del texto con la Google Font */
+body {
+    font-family: 'Lora', serif; /* Usa el nombre de la fuente y 'serif' indica el tipo de fuente (si es serif o sans-serif) */
+    font-size: 16px;
+}
+
+/* Cambiar color de las flechas prev y next */
+.carousel-control-prev-icon,
+.carousel-control-next-icon {
+  color: black; /* Cambia el color de las flechas a negro */
+}
+
+.carousel-control-prev-icon:hover,
+.carousel-control-next-icon:hover {
+  color: black; /* Mantiene el color negro al pasar el mouse por encima */
+}

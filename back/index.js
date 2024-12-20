@@ -109,8 +109,6 @@ app.post('/login', (req, res) => {
     }
 });
 
-
-
 app.post('/validate-token', (req, res) => {
     console.log('Request recibido en /validate-token:', new Date().toISOString());
     
@@ -153,10 +151,37 @@ app.get('/get-data', (req, res) => {
     });
 });
 
+// ------------------------------------------------------- Update numero
+
+app.put('/update-numero', (req, res) => {
+    const { token, numero } = req.body;
+
+    if (typeof numero !== 'number') {
+        return res.status(400).json({ error: 'El número debe ser un valor numérico' });
+    }
+
+    db.get('SELECT * FROM data WHERE token = ?', [token], (err, row) => {
+        if (err) {
+            return res.status(500).json({ error: 'Error al verificar el token' });
+        }
+        if (!row) {
+            return res.status(401).json({ message: 'Token inválido' });
+        }
+
+        db.run('UPDATE data SET numero = ? WHERE id = 1', [numero], (err) => {
+            if (err) {
+                return res.status(500).json({ error: 'Error al actualizar el número' });
+            }
+            res.json({ message: 'Número actualizado correctamente' });
+        });
+    });
+});
+
 // ------------------------------------------------------- Cosas de las imagenes
 const fs = require('fs');
 const path = require('path');
 const multer = require('multer');
+const { log } = require('console');
 
 const storage = multer.diskStorage({
     destination: (req, file, cb) => {
@@ -173,19 +198,11 @@ const storage = multer.diskStorage({
 
 const upload = multer({ storage });
 
-app.put('/update-data', upload.array('images', 10), (req, res) => {
-    const { token, numero, textos, currentImageNames } = req.body;
-
-    console.log(req.body); // Este log mostrará todos los datos recibidos
-    console.log(req.body.textos); // Verifica si `textos` tiene la longitud esperada
-    console.log(req.body.currentImageNames); // Verifica si `currentImageNames` tiene la longitud esperada
+app.put('/update-data', upload.array('images', 4), (req, res) => {
+    const { token, textos } = req.body;
 
     if (!Array.isArray(textos) || textos.length !== 10) {
         return res.status(400).json({ error: 'Debe proporcionar exactamente 10 textos' });
-    }
-
-    if (!Array.isArray(currentImageNames) || currentImageNames.length !== req.files.length) {
-        return res.status(400).json({ error: 'Debe proporcionar exactamente 10 nombres de imágenes' });
     }
 
     db.get('SELECT * FROM data WHERE token = ?', [token], (err, row) => {
@@ -198,31 +215,45 @@ app.put('/update-data', upload.array('images', 10), (req, res) => {
 
         const IMAGE_FOLDER = path.join(__dirname, 'images');
 
-        // Reemplazar cada imagen
-        const updateImagePromises = req.files.map((file, index) => {
-            const currentImageBaseName = path.basename(currentImageNames[index], path.extname(currentImageNames[index]));
-            const matchingFiles = fs.readdirSync(IMAGE_FOLDER).filter(fileName => {
-                const fileBaseName = path.basename(fileName, path.extname(fileName));
-                return fileBaseName === currentImageBaseName;
-            });
+        console.log('Imagenes guardadas:');
+        const existingImages = fs.readdirSync(IMAGE_FOLDER).map(fileName => path.basename(fileName, path.extname(fileName)));
+        console.log(existingImages);
 
-            if (matchingFiles.length === 0) {
-                return Promise.reject({ message: `La imagen actual ${currentImageNames[index]} no existe, no se realizó ningún cambio` });
-            }
+        // Reemplazar cada imagen si el nombre coincide
+        const updateImagePromises = req.files.map((file) => {
+            const imageName = Date.now() + path.extname(file.originalname); // Nombre único basado en timestamp
+            console.log(`Procesando imagen: ${file.originalname}`);
 
-            const currentImagePath = path.join(IMAGE_FOLDER, matchingFiles[0]);
-            const currentImageExtension = path.extname(matchingFiles[0]);
-            const newImagePath = path.join(IMAGE_FOLDER, currentImageBaseName + currentImageExtension);
+            const matchingFiles = existingImages.filter(fileBaseName => fileBaseName === imageName);
 
-            return new Promise((resolve, reject) => {
-                fs.rename(file.path, newImagePath, (err) => {
-                    if (err) {
-                        reject({ error: `Error al actualizar la imagen ${currentImageNames[index]}` });
-                    } else {
-                        resolve({ message: `Imagen ${currentImageNames[index]} actualizada correctamente` });
-                    }
+            if (matchingFiles.length > 0) {
+                const currentImagePath = path.join(IMAGE_FOLDER, matchingFiles[0]);
+                const newImagePath = path.join(IMAGE_FOLDER, imageName);
+
+                // Borrar la imagen anterior si existe y es del mismo nombre
+                try {
+                    fs.unlinkSync(currentImagePath); // Eliminar la imagen anterior
+                    console.log(`Imagen antigua ${currentImagePath} eliminada`);
+                } catch (unlinkError) {
+                    console.error(`Error al eliminar la imagen antigua ${currentImagePath}: ${unlinkError.message}`);
+                    return Promise.reject({ error: `Error al eliminar la imagen antigua ${currentImagePath}` });
+                }
+
+                return new Promise((resolve, reject) => {
+                    fs.rename(file.path, newImagePath, (err) => {
+                        if (err) {
+                            reject({ error: `Error al actualizar la imagen ${file.originalname}` });
+                        } else {
+                            console.log(`Imagen ${file.originalname} actualizada correctamente`);
+                            resolve({ message: `Imagen ${file.originalname} actualizada correctamente` });
+                        }
+                    });
                 });
-            });
+            } else {
+                // Si la imagen no coincide con las imágenes existentes, loggear el nombre no coincide
+                console.log(`La imagen ${file.originalname} no coincide con ninguna imagen guardada`);
+                return Promise.resolve();
+            }
         });
 
         // Esperar todas las promesas de actualización de imágenes
@@ -237,11 +268,11 @@ app.put('/update-data', upload.array('images', 10), (req, res) => {
                     if (!existingRow) {
                         // No existe, realizar un INSERT
                         const insertQuery = `
-                            INSERT INTO data (numero, token, texto1, texto2, texto3, texto4, texto5, texto6, texto7, texto8, texto9, texto10)
-                            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+                            INSERT INTO data (token, texto1, texto2, texto3, texto4, texto5, texto6, texto7, texto8, texto9, texto10)
+                            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
                         `;
 
-                        db.run(insertQuery, [numero, token, ...textos], (err) => {
+                        db.run(insertQuery, [token, ...textos], (err) => {
                             if (err) {
                                 return res.status(500).json({ error: 'Error al insertar los datos' });
                             }
@@ -250,13 +281,13 @@ app.put('/update-data', upload.array('images', 10), (req, res) => {
                     } else {
                         // Existe, realizar un UPDATE
                         const updateQuery = `
-                            UPDATE data SET numero = ?, 
+                            UPDATE data SET 
                             texto1 = ?, texto2 = ?, texto3 = ?, texto4 = ?, texto5 = ?, 
                             texto6 = ?, texto7 = ?, texto8 = ?, texto9 = ?, texto10 = ?
                             WHERE id = 1
                         `;
 
-                        db.run(updateQuery, [numero, ...textos], (err) => {
+                        db.run(updateQuery, [...textos], (err) => {
                             if (err) {
                                 return res.status(500).json({ error: 'Error al actualizar los datos' });
                             }
@@ -266,11 +297,11 @@ app.put('/update-data', upload.array('images', 10), (req, res) => {
                 });
             })
             .catch(err => {
+                console.error('Error al actualizar imágenes:', err);
                 res.status(500).json(err);
             });
     });
 });
-
 
 // Error 404
 app.use((req, res) => {
